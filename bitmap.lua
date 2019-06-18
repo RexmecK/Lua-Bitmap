@@ -76,9 +76,9 @@ function bitmap:binary()
 	for x=1,self.size[1] do
 		for y=1,self.size[2] do
 			local color = self.map[x][y]
+			PixelData:append(color[3])							--	b
 			PixelData:append(color[1])							--	r
 			PixelData:append(color[2])							--	g
-			PixelData:append(color[3])							--	b
 			PixelData:append(color[4])							--	a
 		end
 	end
