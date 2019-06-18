@@ -18,6 +18,15 @@ local function newData()
 		self.bytes = self.bytes..bytes
 	end
 
+	function data:appendBytes(...)
+		local b = ""
+		local ar = {...}
+		for i=1,#ar do 
+			b = b..string.char(ar[i])
+		end
+		self.bytes = self.bytes..b
+	end
+
 	function data:appendBegin(n, byteSize)
 		if not byteSize then byteSize = 1 end
 		local bytes = ""
@@ -72,38 +81,48 @@ end
 
 --makes a bitmap binary file
 function bitmap:binary()
-	local PixelData = newData()
+	local PixelData = {}
 	for x=1,self.size[1] do
 		for y=1,self.size[2] do
 			local color = self.map[x][y]
-			PixelData:append(color[3])							--	b
-			PixelData:append(color[2])							--	g
-			PixelData:append(color[1])							--	r
-			PixelData:append(color[4])							--	a
+			PixelData[#PixelData+1] = string.char(math.min(math.max(color[3], 0), 255))		--	b
+			PixelData[#PixelData+1] = string.char(math.min(math.max(color[2], 0), 255))		--	g
+			PixelData[#PixelData+1] = string.char(math.min(math.max(color[1], 0), 255))		--	r
+			PixelData[#PixelData+1] = string.char(math.min(math.max(color[4], 0), 255))		--	a
+			looptick()
 		end
 	end
 	
 	local InfoHeaderData = newData()
-	InfoHeaderData:append(self.size[1],4)						--	Horizontal width of bitmap in pixels
-	InfoHeaderData:append(self.size[2],4)						--	Vertical height of bitmap in pixels
-	InfoHeaderData:append(1,2)									--	Number of Planes (=1)
-	InfoHeaderData:append(32,2)									--	32 = 32bit RGBA
-	InfoHeaderData:append(0,4)									--	0 = BI_RGB no compression
-	InfoHeaderData:append(16,4)									--	(compressed) Size of Image
-	InfoHeaderData:append(0,4)									--	horizontal resolution: Pixels/meter
-	InfoHeaderData:append(0,4)									--	vertical resolution: Pixels/meter
-	InfoHeaderData:append(0,4)									--	Number of actually used colors. For a 8-bit / pixel bitmap this will be 100h or 256.
-	InfoHeaderData:append(0,4)									--	0 = all
-	InfoHeaderData:appendBegin(InfoHeaderData:size()+4,4)		--	Size of InfoHeader =40 
+	InfoHeaderData:append(self.size[1],4)					--	Horizontal width of bitmap in pixels
+	InfoHeaderData:append(self.size[2],4)					--	Vertical height of bitmap in pixels
+	InfoHeaderData:append(1,2)								--	Number of color planes being used
+	InfoHeaderData:append(32,2)								--	Number of bits per pixel
+	InfoHeaderData:append(3,4)								--	BI_BITFIELDS, no pixel array compression used
+	InfoHeaderData:append(32,4)								--	Size of the raw bitmap data (including padding)
+	InfoHeaderData:append(2835,4)							--	horizontal resolution: Pixels/meter
+	InfoHeaderData:append(2835,4)							--	vertical resolution: Pixels/meter
+	InfoHeaderData:append(0,4)								--	Number of colors in the palette
+	InfoHeaderData:append(0,4)								--	0 = all
+	InfoHeaderData:appendBytes(0,0,255,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(0,255,0,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(255,0,0,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(0,0,0,255)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(32,110,105,87)				-- LCS_WINDOWS_COLOR_SPACE
+	InfoHeaderData:append(0,36)								--	CIEXYZTRIPLE Color Space endpoints	
+	InfoHeaderData:append(0,4)								--	0 Red Gamma
+	InfoHeaderData:append(0,4)								--	0 Green Gamma
+	InfoHeaderData:append(0,4)								--	0 Blue Gamma
+	InfoHeaderData:appendBegin(InfoHeaderData:size()+4,4)	--	Size of InfoHeader
 
 	local HeaderData = newData()
-	HeaderData:append(string.byte("B"))										--	signature
-	HeaderData:append(string.byte("M"))										--	signature
-	HeaderData:append(InfoHeaderData:size() + PixelData:size() + 14,4)		--	File size in bytes
-	HeaderData:append(0,4)													--	unused (=0)
-	HeaderData:append(HeaderData:size() + InfoHeaderData:size() + 4,4)		--	Offset from beginning of file to the beginning of the bitmap data
+	HeaderData:appendBytes(string.byte("B"), string.byte("M"))				--	signature
+	HeaderData:append(InfoHeaderData:size() + #PixelData + 14,4)			--	File size in bytes
+	HeaderData:append(0,2)													--	unused
+	HeaderData:append(0,2)													--	unused
+	HeaderData:append(HeaderData:size() + InfoHeaderData:size() + 4,4)		--	Pixel data file address
 
-	return HeaderData.bytes..InfoHeaderData.bytes..PixelData.bytes
+	return HeaderData.bytes..InfoHeaderData.bytes..table.concat(PixelData)
 end
 
 function bitmap:save(at)
@@ -117,15 +136,21 @@ function bitmap:save(at)
 end
 
 --[[
+local img = bitmap:new(32,32)
+for x=1,32 do
+  for y=1,32 do
+    img:setPixelColor(x,y,
+      {
+        math.floor(((math.sin(x/math.pi) + 1) / 2) * 255),
+        0,
+        math.floor(((math.sin(y/math.pi) + 1) / 2) * 255),
+        math.floor(((math.sin(y/math.pi) + 1) / 2) * 255)
+      }
+    )
+  end
+end
 
-local img = bitmap:new(6,6)
-img:setPixelColor(3,3,{255,0,255,255})
-img:setPixelColor(6,6,{0,0,255,255})
-img:setPixelColor(6,9,{0,0,255,255})
-img:setPixelColor(1,1,{255,255,255,255})
-img:binary()
-local file = io.open("somefile.bmp", "w")
+local file = io.open("somefile.bmp", "wb")
 file:write(img:binary())
 file:close()
-
-]]
+--]]
