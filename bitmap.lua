@@ -82,14 +82,13 @@ end
 --makes a bitmap binary file
 function bitmap:binary()
 	local PixelData = {}
-	for x=1,self.size[1] do
-		for y=1,self.size[2] do
+	for y=1,self.size[2] do
+		for x=1,self.size[1] do
 			local color = self.map[x][y]
 			PixelData[#PixelData+1] = string.char(math.min(math.max(color[3], 0), 255))		--	b
 			PixelData[#PixelData+1] = string.char(math.min(math.max(color[2], 0), 255))		--	g
 			PixelData[#PixelData+1] = string.char(math.min(math.max(color[1], 0), 255))		--	r
 			PixelData[#PixelData+1] = string.char(math.min(math.max(color[4], 0), 255))		--	a
-			looptick()
 		end
 	end
 	
@@ -104,11 +103,11 @@ function bitmap:binary()
 	InfoHeaderData:append(2835,4)							--	vertical resolution: Pixels/meter
 	InfoHeaderData:append(0,4)								--	Number of colors in the palette
 	InfoHeaderData:append(0,4)								--	0 = all
-	InfoHeaderData:appendBytes(0,0,255,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
-	InfoHeaderData:appendBytes(0,255,0,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
-	InfoHeaderData:appendBytes(255,0,0,0)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
-	InfoHeaderData:appendBytes(0,0,0,255)					-- Red channel bit mask (valid because BI_BITFIELDS is specified)
-	InfoHeaderData:appendBytes(32,110,105,87)				-- LCS_WINDOWS_COLOR_SPACE
+	InfoHeaderData:appendBytes(0,0,255,0)					--	Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(0,255,0,0)					--	Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(255,0,0,0)					--	Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(0,0,0,255)					--	Red channel bit mask (valid because BI_BITFIELDS is specified)
+	InfoHeaderData:appendBytes(32,110,105,87)				--	LCS_WINDOWS_COLOR_SPACE
 	InfoHeaderData:append(0,36)								--	CIEXYZTRIPLE Color Space endpoints	
 	InfoHeaderData:append(0,4)								--	0 Red Gamma
 	InfoHeaderData:append(0,4)								--	0 Green Gamma
@@ -137,19 +136,6 @@ end
 
 --[[
 local img = bitmap:new(32,32)
-for x=1,32 do
-  for y=1,32 do
-    img:setPixelColor(x,y,
-      {
-        math.floor(((math.sin(x/math.pi) + 1) / 2) * 255),
-        0,
-        math.floor(((math.sin(y/math.pi) + 1) / 2) * 255),
-        math.floor(((math.sin(y/math.pi) + 1) / 2) * 255)
-      }
-    )
-  end
-end
-
 local file = io.open("somefile.bmp", "wb")
 file:write(img:binary())
 file:close()
