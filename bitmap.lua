@@ -108,7 +108,7 @@ end
 
 function bitmap:save(at)
 	local binaryData = self:binary()
-	local file = io.open(at, "w")
+	local file = io.open(at, "wb")
 	if file then
 		file:write(binaryData)
 		return file:close()
